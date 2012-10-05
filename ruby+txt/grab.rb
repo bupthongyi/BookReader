@@ -7,49 +7,49 @@ agent = Mechanize.new { |agent|
   #agent.user_agent_alias = 'Mac Safari'     # surrogate browser
 }
 
-enter = agent.get('http://www.daomubiji.com/dao-mu-bi-ji-quan-ji')  # start page
+############
+## STEP 1 ##
+############
 
-links = Hash.new    # all links on that page
+# start page
+page = agent.get('http://www.daomubiji.com/dao-mu-bi-ji-quan-ji')
+# all links on that page
+links = Hash.new
+# start looping
 counter = 1
-enter.links_with(:attributes => /盗墓笔记8\s+/).each do |link|
+page.links_with(:attributes => /盗墓笔记8\s+/).each do |link|
     # puts link.href
     links[counter.to_s] = link.href
     counter = counter + 1
 end
 
-links.each do |key, value|
-  
-  puts(value, key)
-  temp = agent.get(value).body
-  
-  hs = temp.match("<h1>")
-  hsp = hs.begin(0)
-  
-  he = temp.match("</h1>")
-  hep = he.begin(0)
-    
-  header = temp[hsp+"<h1>".length...hep]
-  
-  puts header
-  
-  marker1 = temp.match("<div class=\"content\">")
-  start = marker1.begin(0) + "<div class=\"content\">".length
-  
-  marker2 = temp.match("<div style=\"padding:0px 0px 0px 10px; width:338px; float:left;\">")
-  terminal = marker2.begin(0)
-  
-  #puts(temp[start...terminal])
+############
+## STEP 2 ##
+############
 
-  text = temp[start...terminal]
-  text = text.delete("<p>")
-  text = text.delete("</p>")
-  text = text.delete('\n')
-  
+links.map do |key, value|
+  # page object
+  page = agent.get(value)
+  # header of the chapter
+  header = page.search('div.bg').search('h1').text
+  # raw text material need screening
+  text = page.search('div.content').search('p')
+  result = ''   # result 
+  # screening
+  text.map do |body|
+    if body.children[1] == nil
+      result = result + body.children[0]
+    else
+      break
+    end
+  end
+  # output to file
   file = File.open("ch" + key + ".txt", "w")
   file.puts(header + "\n")
-  file.puts(text)
+  file.puts(result)
   file.close
-  
-  #break
-  
+  # indicator
+  puts "Chapter " + header + ": done"
+  # don't crash the website
+  sleep(0.1)
 end
